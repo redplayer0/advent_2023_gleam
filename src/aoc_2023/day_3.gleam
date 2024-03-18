@@ -35,34 +35,27 @@ fn inner_parse_words(tokens: List(Token), word: Word, words: List(Word)) {
     [], NoWord -> words
     [], IsWord(_, _, _) -> [word, ..words]
     [token, ..rest], word ->
-      case list.contains(numbers, token.value) {
-        True -> {
-          case word {
-            NoWord ->
-              inner_parse_words(rest, IsWord(token.pos, 1, token.value), words)
-            IsWord(pos, len, val) -> {
-              case int.remainder(token.pos.col, 140) {
-                Ok(0) ->
-                  inner_parse_words(rest, IsWord(token.pos, 1, token.value), [
-                    word,
-                    ..words
-                  ])
-                _ ->
-                  inner_parse_words(
-                    rest,
-                    IsWord(pos, len + 1, val <> token.value),
-                    words,
-                  )
-              }
-            }
+      case list.contains(numbers, token.value), word {
+        True, NoWord ->
+          inner_parse_words(rest, IsWord(token.pos, 1, token.value), words)
+        True, IsWord(pos, len, val) -> {
+          case int.remainder(token.pos.col, 140) {
+            Ok(0) ->
+              inner_parse_words(rest, IsWord(token.pos, 1, token.value), [
+                word,
+                ..words
+              ])
+            _ ->
+              inner_parse_words(
+                rest,
+                IsWord(pos, len + 1, val <> token.value),
+                words,
+              )
           }
         }
-        False -> {
-          case word {
-            NoWord -> inner_parse_words(rest, NoWord, words)
-            IsWord(_, _, _) -> inner_parse_words(rest, NoWord, [word, ..words])
-          }
-        }
+        False, NoWord -> inner_parse_words(rest, NoWord, words)
+        False, IsWord(_, _, _) ->
+          inner_parse_words(rest, NoWord, [word, ..words])
       }
   }
 }
@@ -112,5 +105,53 @@ pub fn pt_1(input: String) {
 }
 
 pub fn pt_2(input: String) {
-  todo as "part 2 not implemented"
+  let tokens =
+    parse_tokens(input)
+    |> list.flatten
+  let words = parse_words(tokens)
+  let gear_positions =
+    tokens
+    |> list.filter_map(fn(t) {
+      case t.value {
+        "*" -> Ok(t.pos)
+        _ -> Error(t)
+      }
+    })
+
+  let parts = {
+    use word <- list.filter(words)
+    use word_neighboor <- list.any(word_neighboors(word))
+    list.contains(gear_positions, word_neighboor)
+  }
+
+  list.map(gear_positions, fn(gear_pos) {
+    list.fold(parts, [], fn(acc, part) {
+      let assert IsWord(_, _, val) = part
+      let assert Ok(num) = int.parse(val)
+      case list.contains(word_neighboors(part), gear_pos) {
+        True -> [num, ..acc]
+        False -> acc
+      }
+    })
+  })
+  |> list.filter_map(fn(x) {
+    case list.length(x) {
+      2 -> Ok(list.reduce(x, int.multiply))
+      _ -> Error(0)
+    }
+  })
+  |> list.fold(0, fn(sum, l) {
+    let assert Ok(s) = l
+    sum + s
+  })
+  // let a = {
+  //   use gear_pos <- list.map(gear_positions)
+  //   use acc, part <- list.fold(parts, [])
+  //   let assert IsWord(_, _, val) = part
+  //   let assert Ok(num) = int.parse(val)
+  //   case list.contains(word_neighboors(part), gear_pos) {
+  //     True -> [num, ..acc]
+  //     False -> acc
+  //   }
+  // }
 }
