@@ -39,6 +39,7 @@ fn inner_parse_words(tokens: List(Token), word: Word, words: List(Word)) {
         True, NoWord ->
           inner_parse_words(rest, IsWord(token.pos, 1, token.value), words)
         True, IsWord(pos, len, val) -> {
+          // check if token is the first token of line
           case int.remainder(token.pos.col, 140) {
             Ok(0) ->
               inner_parse_words(rest, IsWord(token.pos, 1, token.value), [
