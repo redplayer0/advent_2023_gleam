@@ -5,7 +5,6 @@ import gleam/float
 import gleam/set
 import gleam/result
 import gleam/queue
-import gleam/io
 
 fn parse(input: String) -> List(List(List(String))) {
   use line <- list.map(string.split(input, "\n"))
@@ -37,44 +36,59 @@ pub fn pt_2(input: String) {
     |> set.size
     |> queue.push_back(q, _)
   }
-  io.debug(matches)
 
   count_cards(queue.to_list(matches))
-  // use total, card, index <- list.index_fold(queue.to_list(matches), 0)
-  // index
-  // |> list.range(index + 1, _)
-  // |> int.sum
-  // |> int.multiply(card)
-  // |> int.add(total)
 }
 
 fn count_cards(cards: List(Int)) -> Int {
-  inner_count_cards(cards, 0, [])
+  inner_count_cards(cards, 1, [])
 }
 
-// somehow stop at max index and dont add cards
 fn inner_count_cards(cards: List(Int), index: Int, copies: List(Int)) -> Int {
-  case cards, copies {
-    [num_matches, ..rest_cards], [] if num_matches == 0 -> {
-      inner_count_cards(rest_cards, index + 1, [])
+  case cards {
+    [num_matches, ..rest] ->
+      case num_matches > 0 {
+        False ->
+          inner_count_cards(rest, index + 1, list.append(copies, [index]))
+        True -> {
+          let wins = list.range(index + 1, index + num_matches)
+          let wins_and_card = list.append(wins, [index])
+          let num_copies = list_count(copies, index)
+          case num_copies > 0 {
+            True -> {
+              let new_copies =
+                list.repeat(wins, num_copies)
+                |> list.flatten
+                |> list.append(wins)
+                |> list.append(copies)
+                |> list.append([index])
+
+              inner_count_cards(rest, index + 1, new_copies)
+            }
+            False ->
+              inner_count_cards(
+                rest,
+                index + 1,
+                list.append(copies, wins_and_card),
+              )
+          }
+        }
+      }
+    _ -> list.length(copies)
+  }
+}
+
+pub fn list_count(l: List(var), match: var) -> Int {
+  inner_list_count(l, match, 0)
+}
+
+fn inner_list_count(l: List(var), match: var, acc: Int) -> Int {
+  case l {
+    [first, ..rest] if first == match -> inner_list_count(rest, match, acc + 1)
+    [first] if first == match -> {
+      acc + 1
     }
-    [num_matches, ..rest_cards], [] -> {
-      inner_count_cards(
-        rest_cards,
-        index + 1,
-        list.append(
-          list.range(int.min(140, index + 1), int.min(140, index + num_matches)),
-          copies,
-        ),
-      )
-    }
-    // [_], [] -> {
-    //   inner_count_cards(
-    //     rest_cards,
-    //     index + 1,
-    //     list.append(list.range(int.min(140, index + 1), int.min(140, index + num_matches)), copies),
-    //   )
-    // }
-    _, _ -> 0
+    [_, ..rest] -> inner_list_count(rest, match, acc)
+    _ -> acc
   }
 }
